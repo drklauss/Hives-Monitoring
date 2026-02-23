@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ESP Hive - Настройка WiFi</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+                background: #f5f5f5;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            }
+        .container {
+            max-width: 500px;
+            width: 100%;
+        }
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 15px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        select, input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            background: white;
+        }
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .status {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        .network-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .network-item:hover {
+            background: #f5f5f5;
+        }
+        .network-name {
+            font-weight: 500;
+        }
+        .network-signal {
+            color: #666;
+            font-size: 14px;
+        }
+        .lock-icon {
+            color: #999;
+            margin-left: 8px;
+        }
+        .scan-btn {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .scan-btn:hover {
+            background: #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h2>🔧 Настройка подключения</h2>
+            
+            <div style="text-align: center; margin-bottom: 20px;">
+                <button class="scan-btn" onclick="scanNetworks()">
+                    🔍 Сканировать сети WiFi
+                </button>
+            </div>
+            
+            <div id="networksList" style="margin-bottom: 20px; display: none;">
+                <h3 style="font-size: 16px; margin-bottom: 10px;">Доступные сети:</h3>
+                <div id="networks"></div>
+            </div>
+            
+            <form id="wifiForm" onsubmit="connectWiFi(event)">
+                <div class="form-group">
+                    <label>Название сети (SSID)</label>
+                    <input type="text" id="ssid" name="ssid" required 
+                           placeholder="Введите название WiFi сети">
+                </div>
+                
+                <div class="form-group">
+                    <label>Пароль</label>
+                    <input type="password" id="password" name="password" 
+                           placeholder="Введите пароль (если есть)">
+                </div>
+                
+                <button type="submit" class="btn">📡 Подключиться</button>
+            </form>
+            
+            <div class="status" id="status">
+                <span id="statusText">⏳ Готов к настройке</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function scanNetworks() {
+            document.getElementById('statusText').innerHTML = '⏳ Сканирование сетей...';
+            
+            fetch('/scan')
+                .then(response => response.json())
+                .then(networks => {
+                    let html = '';
+                    networks.forEach(net => {
+                        let lock = net.encrypted ? '🔒' : '🔓';
+                        let signal = '📶';
+                        if (net.rssi > -50) signal = '📶📶📶';
+                        else if (net.rssi > -70) signal = '📶📶';
+                        else signal = '📶';
+                        
+                        html += `
+                            <div class="network-item" onclick="selectNetwork('${net.ssid}')">
+                                <span class="network-name">${net.ssid}</span>
+                                <span>
+                                    <span class="network-signal">${signal} ${net.rssi} dBm</span>
+                                    <span class="lock-icon">${lock}</span>
+                                </span>
+                            </div>
+                        `;
+                    });
+                    
+                    if (networks.length === 0) {
+                        html = '<div style="text-align: center; padding: 20px; color: #999;">Сети не найдены</div>';
+                    }
+                    
+                    document.getElementById('networks').innerHTML = html;
+                    document.getElementById('networksList').style.display = 'block';
+                    document.getElementById('statusText').innerHTML = '✅ Найдено сетей: ' + networks.length;
+                })
+                .catch(error => {
+                    document.getElementById('statusText').innerHTML = '❌ Ошибка сканирования';
+                });
+        }
+        
+        function selectNetwork(ssid) {
+            document.getElementById('ssid').value = ssid;
+            document.getElementById('password').focus();
+        }
+        
+        function connectWiFi(event) {
+            event.preventDefault();
+            
+            const ssid = document.getElementById('ssid').value;
+            const password = document.getElementById('password').value;
+            
+            if (!ssid) {
+                alert('Введите название сети');
+                return;
+            }
+            
+            document.getElementById('statusText').innerHTML = '⏳ Подключение к ' + ssid + '...';
+            document.querySelector('button[type="submit"]').disabled = true;
+            
+            const formData = new URLSearchParams();
+            formData.append('ssid', ssid);
+            formData.append('password', password);
+            
+            fetch('/connect', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(html => {
+                document.open();
+                document.write(html);
+                document.close();
+            })
+            .catch(error => {
+                document.getElementById('statusText').innerHTML = '❌ Ошибка подключения';
+                document.querySelector('button[type="submit"]').disabled = false;
+            });
+        }
+        
+        // Автоматически сканируем при загрузке
+        setTimeout(scanNetworks, 500);
+    </script>
+</body>
+</html>
