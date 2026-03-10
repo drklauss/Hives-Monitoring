@@ -10,22 +10,23 @@
 #define PIN_DS18B20 6
 #define PIN_BATTERY 7
 #define PIN_LED_BUILTIN LED_BUILTIN
-#define PIN_OTA_BUTTON 9    
-#define PIN_RESET_BUTTON 10
+#define PIN_BUTTON 9        // Единственная кнопка (Debug + Config)
 
-// Режимы работы
+// Режимы кнопки
+#define BUTTON_MODE_NORMAL 0      // Обычный режим (deep sleep)
+#define BUTTON_MODE_DEBUG 1       // Debug режим (пробуждение на 3 минуты)
+#define BUTTON_MODE_CONFIG 2      // Режим конфигурации (AP mode)
+
+// Режимы пробуждения
 #define WAKEUP_REASON_GPIO 0
 #define WAKEUP_REASON_TIMER 1
-#define WAKEUP_REASON_OTA 2
-#define WAKEUP_REASON_CONFIG 3
 
 // Временные интервалы
 #define DEFAULT_SLEEP_INTERVAL 3600
 #define MIN_SLEEP_INTERVAL 300
 #define MAX_SLEEP_INTERVAL 86400
-#define OTA_WAIT_TIME 30000
-#define OTA_WINDOW_TIME 15000
-#define RESET_HOLD_TIME 5000
+#define BUTTON_HOLD_TIME 3000      // Удержание 3 сек = режим конфигурации
+#define DEBUG_MODE_DURATION 180    // Debug режим длится 3 минуты
 
 // WiFi AP режим
 #define AP_SSID "ESP-Hive-Setup"
@@ -52,11 +53,6 @@
 // Версия прошивки
 #define FIRMWARE_VERSION "1.0.0"
 
-// Параметры повторных подключений
-#define MAX_RECONNECT_ATTEMPTS 3
-#define RECONNECT_TIMEOUT 10000
-#define SLEEP_ON_FAILURE true
-
 // Макрос логирования (единый для всего проекта)
 #define LOG_W(tag, ...) \
     if (isLogEnabled) { \
@@ -70,8 +66,8 @@ extern float currentWeight;
 extern float currentTemperature;
 extern float currentBattery;
 extern uint32_t sleepInterval;
-extern bool isLogEnabled;       
+extern bool isLogEnabled;
 extern uint8_t wakeupReason;
-extern bool forceOTAMode;
+extern uint8_t buttonMode;      // BUTTON_MODE_NORMAL, BUTTON_MODE_DEBUG, BUTTON_MODE_CONFIG
 
 #endif

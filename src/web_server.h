@@ -10,7 +10,17 @@
 WebServer server(80);
 DNSServer dnsServer;
 
-// Прототипы функций
+// External variables
+extern int hiveId;
+extern float currentWeight;
+extern float currentTemperature;
+extern float currentBattery;
+extern uint32_t sleepInterval;
+extern bool isLogEnabled;
+extern uint8_t buttonMode;
+extern float scaleFactor;
+
+// Function prototypes
 void handleRoot();
 void handleSetupPage();
 void handleCaptivePortal();
@@ -19,21 +29,14 @@ void handleSetLogLevel();
 void handleRestart();
 void handleWiFiScan();
 void handleWiFiConnect();
-void handleOTAMode();
-void handleOTAStatus();
+void handleStatus();
+void handleFactoryReset();
 void initWebServer();
 void handleWebServer();
 
-// Внешние переменные
-extern int hiveId;
-extern float currentWeight;
-extern float currentTemperature;
-extern float currentBattery;
-extern uint32_t sleepInterval;
-extern bool isLogEnabled;        // ← исправлено с uint8_t на bool
-extern bool forceOTAMode;
-
-// MARK: mainHTML
+// ============================================================================
+// MARK: MAIN PAGE HTML
+// ============================================================================
 const char INDEX_HTML[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html lang="ru">
@@ -163,11 +166,6 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#wifi">
-                            <i class="bi bi-wifi me-2"></i>WiFi
-                        </button>
-                    </li>
-                    <li class="nav-item">
                         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#system">
                             <i class="bi bi-hdd-stack me-2"></i>Система
                         </button>
@@ -179,20 +177,20 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                     <div class="tab-pane fade show active" id="hive">
                         <form id="hiveForm" onsubmit="saveSettings(event)">
                             <div class="row g-4">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label text-body-secondary">
                                         <i class="bi bi-hash me-2"></i>Номер улья
                                     </label>
-                                    <input type="number" class="form-control" name="hive_id" 
+                                    <input type="number" class="form-control" name="hive_id"
                                         min="1" max="99" value="{HIVE_ID}" required>
                                 </div>
                                 
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label text-body-secondary">
                                         <i class="bi bi-clock-history me-2"></i>Интервал пробуждения
                                     </label>
                                     <div class="input-group">
-                                        <input type="number" class="form-control" name="sleep_interval" 
+                                        <input type="number" class="form-control" name="sleep_interval"
                                             min="300" max="86400" value="{SLEEP_INTERVAL}" required>
                                         <span class="input-group-text">сек</span>
                                     </div>
@@ -201,12 +199,12 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                                     </small>
                                 </div>
                                 
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label text-body-secondary">
                                         <i class="bi bi-calibration me-2"></i>Калибровка весов
                                     </label>
                                     <div class="input-group">
-                                        <input type="number" class="form-control" name="scale_factor" 
+                                        <input type="number" class="form-control" name="scale_factor"
                                             step="0.1" value="{SCALE_FACTOR}" required>
                                         <span class="input-group-text">г/ед</span>
                                     </div>
@@ -230,12 +228,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                         </form>
                     </div>
 
-                    <!-- ТАБ 2: WiFi (без изменений) -->
-                    <div class="tab-pane fade" id="wifi">
-                        <!-- ... тот же код, что и в проекте со светом ... -->
-                    </div>
-
-                    <!-- ТАБ 3: Система (с добавлением информации о батарее) -->
+                    <!-- ТАБ 2: Система -->
                     <div class="tab-pane fade" id="system">
                         <div class="row g-4">
                             <div class="col-md-6">
@@ -280,23 +273,18 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                                             <option value="3">🔵 Отладка</option>
                                         </select>
                                     </div>
-                                    <!-- В таб System, после управления уровнем логирования -->
-                                    <div class="list-group-item">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <span><i class="bi bi-cloud-upload me-2"></i>OTA режим</span>
-                                            <span class="badge bg-warning rounded-pill" id="otaStatus">Выкл</span>
-                                        </div>
-                                        <button class="btn btn-warning w-100" onclick="enableOTAMode()">
-                                            <i class="bi bi-cloud-upload me-2"></i>Включить OTA режим (не спать)
-                                        </button>
-                                        <small class="text-body-secondary d-block mt-2">
-                                            Устройство не будет уходить в сон до следующей перезагрузки
-                                        </small>
-                                    </div>
                                     <div class="list-group-item">
                                         <button class="btn btn-outline-danger w-100" onclick="restartESP()">
                                             <i class="bi bi-arrow-repeat me-2"></i>Перезагрузить
                                         </button>
+                                    </div>
+                                    <div class="list-group-item">
+                                        <button class="btn btn-danger w-100" onclick="factoryReset()">
+                                            <i class="bi bi-trash me-2"></i>Сбросить настройки
+                                        </button>
+                                        <small class="text-body-secondary d-block mt-2">
+                                            Восстановление заводских настроек (WiFi, MQTT, калибровка)
+                                        </small>
                                     </div>
                                 </div>
                             </div>
@@ -307,7 +295,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
         </div>
 
         <footer class="text-center text-body-secondary mb-4">
-            <small>ESP32-C3 Hive Monitor • Данные отправляются раз в час</small>
+            <small>ESP32-C3 Hive Monitor • Данные отправляются по расписанию</small>
         </footer>
     </div>
 
@@ -376,33 +364,20 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                 fetch('/restart').then(() => setTimeout(() => location.reload(), 5000));
             }
         }
-
-        // Проверка статуса OTA режима
-        fetch('/otastatus')
-            .then(r => r.json())
-            .then(data => {
-                const otaStatus = document.getElementById('otaStatus');
-                if (data.otaMode) {
-                    otaStatus.textContent = 'Вкл';
-                    otaStatus.className = 'badge bg-success rounded-pill';
-                } else {
-                    otaStatus.textContent = 'Выкл';
-                    otaStatus.className = 'badge bg-warning rounded-pill';
+        
+        function factoryReset() {
+            if (confirm('⚠️ ВНИМАНИЕ! Все настройки будут сброшены:\\n• WiFi\\n• MQTT\\n• Калибровка весов\\n\\nПродолжить?')) {
+                if (confirm('Вы уверены? Это действие необратимо!')) {
+                    fetch('/factoryreset', {method: 'POST'})
+                        .then(r => r.text())
+                        .then(msg => {
+                            alert(msg);
+                            setTimeout(() => location.reload(), 3000);
+                        });
                 }
-            });
-
-        // Включение OTA режима
-        function enableOTAMode() {
-            if (confirm('Включить OTA режим? Устройство не будет спать до перезагрузки')) {
-                fetch('/otamode', {method: 'POST'})
-                    .then(r => r.text())
-                    .then(msg => {
-                        alert(msg);
-                        setTimeout(() => location.reload(), 2000);
-                    });
             }
         }
-        
+
        document.getElementById('hiveForm').onsubmit = function(e) {
             e.preventDefault();
             const formData = new FormData(this);
@@ -429,7 +404,10 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
 </html>
 )rawliteral";
 
-// MARK: handleSetupPage
+
+// ============================================================================
+// MARK: SETUP PAGE HTML
+// ============================================================================
 void handleSetupPage() {
     String html = R"rawliteral(
     <!DOCTYPE html>
@@ -657,7 +635,10 @@ void handleSetupPage() {
 }
 
 
-// MARK: handlers
+// ============================================================================
+// MARK: REQUEST HANDLERS
+// ============================================================================
+
 void handleRoot() {
     String html = FPSTR(INDEX_HTML);
     
@@ -669,7 +650,6 @@ void handleRoot() {
     server.send(200, "text/html", html);
 }
 
-// Перенаправляем на страницу настройки
 void handleCaptivePortal() {
     server.sendHeader("Location", "http://" + WiFi.softAPIP().toString() + "/setup", true);
     server.send(302, "text/plain", "");
@@ -715,9 +695,9 @@ void handleSave() {
 
 void handleSetLogLevel() {
     if (server.hasArg("level")) {
-        bool newLevel = server.arg("level").toInt() > 0;  // конвертируем в bool
-        if (newLevel != isLogEnabled) {
-            isLogEnabled = newLevel;
+        int level = server.arg("level").toInt();
+        if (level >= 0 && level <= 3) {
+            isLogEnabled = level > 0;
             saveSettings();
             server.send(200, "text/plain", "OK");
         } else {
@@ -733,7 +713,7 @@ void handleRestart() {
 }
 
 void handleWiFiScan() {
-    scanWiFiNetworks();  // вызываем функцию из wifi_manager.h
+    scanWiFiNetworks();
 }
 
 void handleWiFiConnect() {
@@ -750,20 +730,41 @@ void handleWiFiConnect() {
         return;
     }
     
-    connectToWiFiNetwork(ssid, password);  // из wifi_manager.h
+    connectToWiFiNetwork(ssid, password);
 }
 
-void handleOTAMode() {
-    forceOTAMode = true;
-    saveSettings();
-    server.send(200, "text/plain", "✅ OTA mode activated");
-    LOG_W("WEB", "OTA mode activated via web interface");
+void handleFactoryReset() {
+    LOG_W("WEB", "⚠️ Factory reset requested via web interface");
+    
+    // Reset settings to defaults
+    resetSettings();
+    
+    server.send(200, "text/plain", "✅ Настройки сброшены. Устройство перезагрузится...");
+    
+    delay(1000);
+    ESP.restart();
 }
 
-void handleOTAStatus() {
-    String json = "{\"otaMode\":" + String(forceOTAMode ? "true" : "false") + "}";
+void handleStatus() {
+    String json = "{";
+    json += "\"weight\":" + String(currentWeight, 1) + ",";
+    json += "\"temp\":" + String(currentTemperature, 1) + ",";
+    json += "\"battery\":" + String(currentBattery, 2) + ",";
+    json += "\"battPct\":" + String(map(constrain((int)(currentBattery * 100), 280, 420), 280, 420, 0, 100)) + ",";
+    json += "\"rssi\":" + String(WiFi.RSSI()) + ",";
+    json += "\"uptime\":" + String(millis() / 1000) + ",";
+    json += "\"ip\":\"" + WiFi.localIP().toString() + "\",";
+    json += "\"freeHeap\":" + String(ESP.getFreeHeap() / 1024) + ",";
+    json += "\"logLevel\":" + String(isLogEnabled ? 2 : 0);
+    json += "}";
+    
     server.send(200, "application/json", json);
 }
+
+
+// ============================================================================
+// MARK: SERVER INITIALIZATION
+// ============================================================================
 
 void initWebServer() {
     server.on("/", handleRoot);
@@ -773,8 +774,8 @@ void initWebServer() {
     server.on("/restart", handleRestart);
     server.on("/scan", handleWiFiScan);
     server.on("/connect", HTTP_POST, handleWiFiConnect);
-    server.on("/otamode", HTTP_POST, handleOTAMode);
-    server.on("/otastatus", handleOTAStatus);
+    server.on("/status", handleStatus);
+    server.on("/factoryreset", HTTP_POST, handleFactoryReset);
     server.onNotFound(handleCaptivePortal);
     
     server.begin();
