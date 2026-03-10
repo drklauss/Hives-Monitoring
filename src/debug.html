@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>ESP Hive Monitor</title>
+    <title>ESP Hive Monitor - Debug Mode</title>
     
     <!-- Bootstrap 5 CSS и иконки -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     
     <style>
-        body { transition: background-color 0.3s ease, color 0.3s ease; }
+        body { transition: background-color 0.3s ease, color: 0.3s ease; }
         .theme-toggle {
             cursor: pointer;
             padding: 0.5rem;
@@ -41,7 +41,7 @@
         <div class="container">
             <a class="navbar-brand" href="#">
                 <i class="bi bi-house-heart-fill me-2"></i>
-                ESP32C3 Hive Monitor
+                ESP Hive Monitor
             </a>
             
             <div class="d-flex align-items-center">
@@ -49,7 +49,7 @@
                     <i class="bi bi-sun-fill" id="themeIcon"></i>
                 </div>
                 <span class="navbar-text">
-                    <small class="text-body-secondary">v1.1</small>
+                    <small class="text-body-secondary">v1.0.0</small>
                 </span>
             </div>
         </div>
@@ -63,10 +63,10 @@
                 <div class="card shadow-sm h-100">
                     <div class="card-body text-center p-4">
                         <div class="display-4 text-primary mb-3">
-                            <i class="bi bi-archive"></i>
+                            <i class="bi bi-speedometer"></i>
                         </div>
                         <h6 class="text-body-secondary mb-2">ВЕС УЛЬЯ</h6>
-                        <h2 class="display-5 fw-bold mb-0" id="weight">32.4</h2>
+                        <h2 class="display-5 fw-bold mb-0" id="weight">45.2</h2>
                         <p class="text-body-secondary">кг</p>
                     </div>
                 </div>
@@ -80,7 +80,7 @@
                             <i class="bi bi-thermometer-half"></i>
                         </div>
                         <h6 class="text-body-secondary mb-2">ТЕМПЕРАТУРА</h6>
-                        <h2 class="display-5 fw-bold mb-0" id="temperature">33.6</h2>
+                        <h2 class="display-5 fw-bold mb-0" id="temperature">24.5</h2>
                         <p class="text-body-secondary">°C</p>
                     </div>
                 </div>
@@ -94,7 +94,7 @@
                             <i class="bi bi-battery-charging"></i>
                         </div>
                         <h6 class="text-body-secondary mb-2">БАТАРЕЯ</h6>
-                        <h2 class="display-5 fw-bold mb-0" id="battery">3.87</h2>
+                        <h2 class="display-5 fw-bold mb-0" id="battery">3.85</h2>
                         <p class="text-body-secondary">В</p>
                     </div>
                 </div>
@@ -108,7 +108,7 @@
                             <i class="bi bi-wifi"></i>
                         </div>
                         <h6 class="text-body-secondary mb-2">СИГНАЛ</h6>
-                        <h2 class="display-5 fw-bold mb-0" id="rssi">-66.4</h2>
+                        <h2 class="display-5 fw-bold mb-0" id="rssi">-52</h2>
                         <p class="text-body-secondary">dBm</p>
                     </div>
                 </div>
@@ -126,11 +126,6 @@
                         </button>
                     </li>
                     <li class="nav-item">
-                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#wifi">
-                            <i class="bi bi-wifi me-2"></i>WiFi
-                        </button>
-                    </li>
-                    <li class="nav-item">
                         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#system">
                             <i class="bi bi-hdd-stack me-2"></i>Система
                         </button>
@@ -138,25 +133,25 @@
                 </ul>
 
                 <div class="tab-content">
-                    <!-- ТАБ 1: Настройки улья -->
+                   <!-- ТАБ 1: Настройки улья -->
                     <div class="tab-pane fade show active" id="hive">
                         <form id="hiveForm" onsubmit="saveSettings(event)">
                             <div class="row g-4">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label text-body-secondary">
                                         <i class="bi bi-hash me-2"></i>Номер улья
                                     </label>
-                                    <input type="number" class="form-control" name="hive_id" 
-                                        min="1" max="99" value="{HIVE_ID}" required>
+                                    <input type="number" class="form-control" name="hive_id"
+                                        min="1" max="99" value="1" required>
                                 </div>
                                 
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label text-body-secondary">
                                         <i class="bi bi-clock-history me-2"></i>Интервал пробуждения
                                     </label>
                                     <div class="input-group">
-                                        <input type="number" class="form-control" name="sleep_interval" 
-                                            min="300" max="86400" value="{SLEEP_INTERVAL}" required>
+                                        <input type="number" class="form-control" name="sleep_interval"
+                                            min="300" max="86400" value="3600" required>
                                         <span class="input-group-text">сек</span>
                                     </div>
                                     <small class="text-body-secondary">
@@ -164,37 +159,18 @@
                                     </small>
                                 </div>
                                 
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <label class="form-label text-body-secondary">
                                         <i class="bi bi-calibration me-2"></i>Калибровка весов
                                     </label>
                                     <div class="input-group">
-                                        <input type="number" class="form-control" name="scale_factor" 
-                                            step="0.1" value="{SCALE_FACTOR}" required>
+                                        <input type="number" class="form-control" name="scale_factor"
+                                            step="0.1" value="-228.0" required>
                                         <span class="input-group-text">г/ед</span>
                                     </div>
-                                </div>
-                                
-                                <div class="col-md-6">
-                                    <label class="form-label text-body-secondary">
-                                        <i class="bi bi-battery-charging me-2"></i>Пороги батареи
-                                    </label>
-                                    <div class="row">
-                                        <div class="col-6">
-                                            <div class="input-group">
-                                                <input type="number" class="form-control" name="battery_min" 
-                                                    step="0.1" min="2.5" max="4.5" value="{BATTERY_MIN}" required>
-                                                <span class="input-group-text">мин</span>
-                                            </div>
-                                        </div>
-                                        <div class="col-6">
-                                            <div class="input-group">
-                                                <input type="number" class="form-control" name="battery_max" 
-                                                    step="0.1" min="2.5" max="4.5" value="{BATTERY_MAX}" required>
-                                                <span class="input-group-text">макс</span>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <small class="text-body-secondary">
+                                        Отрицательное значение для тензодатчика
+                                    </small>
                                 </div>
                             </div>
                             
@@ -212,12 +188,7 @@
                         </form>
                     </div>
 
-                    <!-- ТАБ 2: WiFi (без изменений) -->
-                    <div class="tab-pane fade" id="wifi">
-                        <!-- ... тот же код, что и в проекте со светом ... -->
-                    </div>
-
-                    <!-- ТАБ 3: Система (с добавлением информации о батарее) -->
+                    <!-- ТАБ 2: Система -->
                     <div class="tab-pane fade" id="system">
                         <div class="row g-4">
                             <div class="col-md-6">
@@ -225,27 +196,27 @@
                                 <div class="list-group">
                                     <div class="list-group-item d-flex justify-content-between align-items-center">
                                         <span><i class="bi bi-clock me-2"></i>Время работы</span>
-                                        <span class="badge bg-primary rounded-pill" id="uptime">---</span>
+                                        <span class="badge bg-primary rounded-pill" id="uptime">0д 2ч 15м</span>
                                     </div>
                                     <div class="list-group-item d-flex justify-content-between align-items-center">
                                         <span><i class="bi bi-hdd-network me-2"></i>IP адрес</span>
-                                        <span class="badge bg-secondary rounded-pill" id="ip">---</span>
+                                        <span class="badge bg-secondary rounded-pill" id="ip">192.168.1.100</span>
                                     </div>
                                     <div class="list-group-item d-flex justify-content-between align-items-center">
                                         <span><i class="bi bi-memory me-2"></i>Свободно памяти</span>
-                                        <span class="badge bg-info rounded-pill" id="freeHeap">---</span>
+                                        <span class="badge bg-info rounded-pill" id="freeHeap">128 KB</span>
                                     </div>
                                     <div class="list-group-item d-flex justify-content-between align-items-center">
                                         <span><i class="bi bi-battery-charging me-2"></i>Заряд батареи</span>
-                                        <span class="badge rounded-pill" id="batteryPercent">---</span>
+                                        <span class="badge bg-success rounded-pill" id="batteryPercent">85%</span>
                                     </div>
                                     <div class="list-group-item d-flex justify-content-between align-items-center">
                                         <span><i class="bi bi-tag me-2"></i>Версия</span>
-                                        <span class="badge bg-secondary rounded-pill">)" FIRMWARE_VERSION R"rawliteral(</span>
+                                        <span class="badge bg-secondary rounded-pill">1.0.0</span>
                                     </div>
                                     <div class="list-group-item d-flex justify-content-between align-items-center">
                                         <span><i class="bi bi-terminal me-2"></i>Уровень логов</span>
-                                        <span class="badge bg-secondary rounded-pill" id="isLogEnabledDisplay">---</span>
+                                        <span class="badge bg-secondary rounded-pill" id="isLogEnabledDisplay">🟢 Информация</span>
                                     </div>
                                 </div>
                             </div>
@@ -267,6 +238,14 @@
                                             <i class="bi bi-arrow-repeat me-2"></i>Перезагрузить
                                         </button>
                                     </div>
+                                    <div class="list-group-item">
+                                        <button class="btn btn-danger w-100" onclick="factoryReset()">
+                                            <i class="bi bi-trash me-2"></i>Сбросить настройки
+                                        </button>
+                                        <small class="text-body-secondary d-block mt-2">
+                                            Восстановление заводских настроек (WiFi, MQTT, калибровка)
+                                        </small>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -276,7 +255,7 @@
         </div>
 
         <footer class="text-center text-body-secondary mb-4">
-            <small>ESP32-C3 Hive Monitor • Данные отправляются раз в час</small>
+            <small>ESP32-C3 Hive Monitor • Данные отправляются по расписанию</small>
         </footer>
     </div>
 
@@ -298,64 +277,91 @@
             document.getElementById('themeIcon').className = savedTheme === 'light' ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
         }
         
-        // Обновление статистики
+        // Обновление статистики (демо-данные для визуального тестирования)
         function updateStats() {
-            fetch('/status')
-                .then(r => r.json())
-                .then(data => {
-                    document.getElementById('weight').textContent = data.weight.toFixed(1);
-                    document.getElementById('temperature').textContent = data.temp.toFixed(1);
-                    document.getElementById('battery').textContent = data.battery.toFixed(2);
-                    document.getElementById('rssi').textContent = data.rssi;
-                    
-                    // Процент батареи с цветом
-                    const battPercent = document.getElementById('batteryPercent');
-                    battPercent.textContent = data.battPct.toFixed(0) + '%';
-                    battPercent.className = 'badge rounded-pill ';
-                    if (data.battPct > 50) battPercent.classList.add('bg-success');
-                    else if (data.battPct > 20) battPercent.classList.add('bg-warning');
-                    else battPercent.classList.add('bg-danger');
-                    
-                    // Uptime
-                    let uptime = '';
-                    const days = Math.floor(data.uptime / 86400);
-                    const hours = Math.floor((data.uptime % 86400) / 3600);
-                    const mins = Math.floor((data.uptime % 3600) / 60);
-                    if (days > 0) uptime += days + 'д ';
-                    uptime += hours + 'ч ' + mins + 'м';
-                    document.getElementById('uptime').textContent = uptime;
-                    
-                    document.getElementById('ip').textContent = data.ip;
-                    document.getElementById('freeHeap').textContent = data.freeHeap + ' KB';
-                    
-                    // Уровень логов
-                    const levels = ['🔇 Выключено', '🔴 Ошибки', '🟢 Информация', '🔵 Отладка'];
-                    document.getElementById('isLogEnabledDisplay').textContent = levels[data.logLevel];
-                    document.getElementById('logLevelSelector').value = data.logLevel;
-                });
+            // В реальном устройстве данные приходят с сервера:
+            // fetch('/status').then(r => r.json()).then(data => { ... });
+            
+            // Демо-данные для визуального тестирования
+            const data = {
+                weight: 45.2 + (Math.random() - 0.5) * 0.5,
+                temp: 24.5 + (Math.random() - 0.5) * 0.3,
+                battery: 3.85 + (Math.random() - 0.5) * 0.02,
+                rssi: -52 + Math.floor((Math.random() - 0.5) * 10),
+                battPct: 85,
+                uptime: 8100, // 2ч 15м
+                ip: '192.168.1.100',
+                freeHeap: 128,
+                logLevel: 2
+            };
+            
+            document.getElementById('weight').textContent = data.weight.toFixed(1);
+            document.getElementById('temperature').textContent = data.temp.toFixed(1);
+            document.getElementById('battery').textContent = data.battery.toFixed(2);
+            document.getElementById('rssi').textContent = data.rssi;
+            
+            // Процент батареи с цветом
+            const battPercent = document.getElementById('batteryPercent');
+            battPercent.textContent = data.battPct.toFixed(0) + '%';
+            battPercent.className = 'badge rounded-pill ';
+            if (data.battPct > 50) battPercent.classList.add('bg-success');
+            else if (data.battPct > 20) battPercent.classList.add('bg-warning');
+            else battPercent.classList.add('bg-danger');
+            
+            // Uptime
+            let uptime = '';
+            const days = Math.floor(data.uptime / 86400);
+            const hours = Math.floor((data.uptime % 86400) / 3600);
+            const mins = Math.floor((data.uptime % 3600) / 60);
+            if (days > 0) uptime += days + 'д ';
+            uptime += hours + 'ч ' + mins + 'м';
+            document.getElementById('uptime').textContent = uptime;
+            
+            document.getElementById('ip').textContent = data.ip;
+            document.getElementById('freeHeap').textContent = data.freeHeap + ' KB';
+            
+            // Уровень логов
+            const levels = ['🔇 Выключено', '🔴 Ошибки', '🟢 Информация', '🔵 Отладка'];
+            document.getElementById('isLogEnabledDisplay').textContent = levels[data.logLevel];
+            document.getElementById('logLevelSelector').value = data.logLevel;
         }
         
         function changeLogLevel(level) {
-            fetch('/setLogLevel', {method:'POST', body:new URLSearchParams({level:level})})
-                .then(() => alert('✅ Уровень логирования изменен. Перезагрузите устройство.'));
+            console.log('Change log level to:', level);
+            alert('✅ Уровень логирования изменен. Перезагрузите устройство.');
         }
         
         function restartESP() {
             if (confirm('Перезагрузить устройство?')) {
-                fetch('/restart').then(() => setTimeout(() => location.reload(), 5000));
+                console.log('Restarting...');
+                alert('Устройство перезагружается...');
             }
         }
         
+        function factoryReset() {
+            if (confirm('⚠️ ВНИМАНИЕ! Все настройки будут сброшены:\n• WiFi\n• MQTT\n• Калибровка весов\n\nПродолжить?')) {
+                if (confirm('Вы уверены? Это действие необратимо!')) {
+                    console.log('Factory reset...');
+                    alert('✅ Настройки сброшены. Устройство перезагрузится...');
+                }
+            }
+        }
+        
+        // Сохранение настроек
         document.getElementById('hiveForm').onsubmit = function(e) {
             e.preventDefault();
-            const data = new URLSearchParams(new FormData(this));
-            fetch('/save', {method:'POST', body:data})
-                .then(() => alert('✅ Настройки сохранены'));
+            const formData = new FormData(this);
+            const data = new URLSearchParams(formData);
+            
+            console.log('Saving settings:', Object.fromEntries(formData));
+            alert('✅ Настройки сохранены. Устройство перезагрузится...');
         };
         
+        // Инициализация
         loadTheme();
         updateStats();
-        setInterval(updateStats, 5000);
+        // В реальном устройстве обновление каждые 5 секунд:
+        // setInterval(updateStats, 5000);
     </script>
 </body>
 </html>

@@ -9,12 +9,12 @@
 #include "mqtt_manager.h"
 #include "sensors.h"
 #include "hive_control.h"
+#include "button_manager.h"
 
-// ========== РЕЖИМ КОНФИГУРАЦИИ ==========
+// ========== РЕЖИМ КОНФИГУРАЦИИ (AP MODE) ==========
 void runConfigurationMode() {
-    LOG_W("MODE", "⚙️ Starting configuration mode...");
+    LOG_W("MODE", "⚙️ Starting configuration mode (AP)...");
     
-    wakeupReason = WAKEUP_REASON_CONFIG;
     startAPMode();
     initWebServer();
     initOTA();
@@ -27,6 +27,7 @@ void runConfigurationMode() {
     while (true) {
         handleWebServer();
         handleOTA();
+        checkButtonDuringOperation();  // Позволяет перейти в config mode удержанием кнопки
         
         if (millis() - lastBlink > 1000) {
             ledState = !ledState;
@@ -34,14 +35,63 @@ void runConfigurationMode() {
             lastBlink = millis();
         }
         
-        if (forceOTAMode) {
-            LOG_W("MODE", "New settings saved - restarting");
-            delay(1000);
-            ESP.restart();
+        delay(10);
+    }
+}
+
+// ========== DEBUG РЕЖИМ (WiFi + Web + OTA) ==========
+void runDebugMode() {
+    LOG_W("MODE", "✨ Starting Debug mode (%d seconds)...", DEBUG_MODE_DURATION);
+    
+    // Подключаемся к WiFi
+    if (!connectToWiFiWithTimeout(30000)) {
+        LOG_W("MODE", "❌ WiFi connection failed in Debug mode");
+        // Если не удалось подключиться, засыпаем
+        buttonMode = BUTTON_MODE_NORMAL;
+        saveSettings();
+        goToSleep();
+        return;
+    }
+    
+    LOG_W("MODE", "✅ WiFi connected: %s", WiFi.localIP().toString().c_str());
+    
+    // Инициализируем веб-сервер и OTA
+    initWebServer();
+    initOTA();
+    
+    // Читаем сенсоры для отображения на веб-странице
+    readSensors();
+    
+    unsigned long startTime = millis();
+    unsigned long lastBlink = 0;
+    bool ledState = false;
+    
+    // Работаем в течение DEBUG_MODE_DURATION секунд
+    while (millis() - startTime < DEBUG_MODE_DURATION * 1000) {
+        handleWebServer();
+        handleOTA();
+        checkButtonDuringOperation();  // Позволяет перейти в config mode удержанием кнопки
+        
+        // Мигание светодиодом (быстрое в Debug режиме)
+        if (millis() - lastBlink > 500) {
+            ledState = !ledState;
+            digitalWrite(PIN_LED_BUILTIN, ledState);
+            lastBlink = millis();
         }
         
         delay(10);
     }
+    
+    LOG_W("MODE", "Debug mode timeout, going to sleep...");
+    
+    // Сбрасываем режим и засыпаем
+    buttonMode = BUTTON_MODE_NORMAL;
+    saveSettings();
+    
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    
+    goToSleep();
 }
 
 // ========== НОРМАЛЬНЫЙ РЕЖИМ ==========
@@ -64,12 +114,6 @@ void runNormalMode() {
             publishHiveData();
         } else {
             LOG_W("MODE", "MQTT connection failed");
-        }
-        
-        unsigned long otaWindow = millis();
-        while (millis() - otaWindow < OTA_WINDOW_TIME) {
-            handleOTA();
-            delay(10);
         }
     } else {
         LOG_W("MODE", "WiFi connection failed");

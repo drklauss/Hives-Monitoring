@@ -7,233 +7,253 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-                background: #f5f5f5;
-                min-height: 100vh;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 20px;
-            }
-        .container {
-            max-width: 500px;
-            width: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
+        .container { max-width: 500px; width: 100%; }
         .card {
             background: white;
-            border-radius: 15px;
+            border-radius: 10px;
             padding: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         h2 {
             color: #333;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 15px;
+            margin-bottom: 25px;
+            font-size: 1.5rem;
+            text-align: center;
         }
-        .form-group {
-            margin-bottom: 20px;
-        }
+        .form-group { margin-bottom: 20px; }
         label {
             display: block;
             margin-bottom: 8px;
             color: #555;
             font-weight: 500;
+            font-size: 0.9rem;
         }
-        select, input {
+        input, select {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-            background: white;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
         }
-        select:focus, input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
+        input:focus { outline: none; border-color: #2196F3; }
         .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #2196F3;
             color: white;
             border: none;
-            padding: 14px 20px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
+            padding: 12px;
+            border-radius: 5px;
+            font-size: 1rem;
             cursor: pointer;
             width: 100%;
-            transition: transform 0.2s;
         }
-        .btn:hover {
-            transform: translateY(-2px);
+        .btn:hover { background: #1976D2; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
         }
-        .btn:active {
-            transform: translateY(0);
-        }
-        .status {
-            margin-top: 15px;
-            padding: 12px;
-            border-radius: 8px;
-            background: #f8f9fa;
-            text-align: center;
-            color: #666;
-            font-size: 14px;
+        .btn-secondary:hover { background: #e0e0e0; }
+        .network-list {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 15px 0;
+            max-height: 250px;
+            overflow-y: auto;
         }
         .network-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+        .network-item:last-child { border-bottom: none; }
+        .network-item:hover { background: #f8f9fa; }
+        .network-item.selected { background: #e3f2fd; }
+        .network-name { font-weight: 500; }
+        .network-info { color: #666; font-size: 0.85rem; }
+        .status {
+            margin-top: 15px;
             padding: 10px;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
-        }
-        .network-item:hover {
-            background: #f5f5f5;
-        }
-        .network-name {
-            font-weight: 500;
-        }
-        .network-signal {
-            color: #666;
-            font-size: 14px;
-        }
-        .lock-icon {
-            color: #999;
-            margin-left: 8px;
-        }
-        .scan-btn {
-            background: #f8f9fa;
-            border: 1px solid #ddd;
-            padding: 8px 15px;
             border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            margin-bottom: 15px;
+            background: #f8f9fa;
+            color: #666;
+            font-size: 0.9rem;
+            display: none;
         }
-        .scan-btn:hover {
-            background: #e9ecef;
+        .status.success { background: #d4edda; color: #155724; display: block; }
+        .status.error { background: #f8d7da; color: #721c24; display: block; }
+        .status.info { background: #d1ecf1; color: #0c5460; display: block; }
+        .text-center { text-align: center; }
+        .mb-3 { margin-bottom: 15px; }
+        .mt-3 { margin-top: 15px; }
+        .small { font-size: 0.85rem; color: #666; }
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ccc;
+            border-top-color: #333;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
         }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="card">
-            <h2>🔧 Настройка подключения</h2>
+            <h2>🔧 Настройка WiFi</h2>
             
-            <div style="text-align: center; margin-bottom: 20px;">
-                <button class="scan-btn" onclick="scanNetworks()">
-                    🔍 Сканировать сети WiFi
+            <div class="text-center mb-3">
+                <button class="btn btn-secondary" onclick="scanNetworks()" id="scanBtn">
+                    🔍 Сканировать сети
                 </button>
             </div>
             
-            <div id="networksList" style="margin-bottom: 20px; display: none;">
-                <h3 style="font-size: 16px; margin-bottom: 10px;">Доступные сети:</h3>
-                <div id="networks"></div>
+            <div id="networksContainer" style="display: block;">
+                <div class="network-list" id="networksList">
+                    <!-- Демо-сети для визуального тестирования -->
+                    <div class="network-item" onclick="selectNetwork('HomeNetwork')">
+                        <span class="network-name">HomeNetwork</span>
+                        <span class="network-info">📶📶📶 -52dBm 🔒</span>
+                    </div>
+                    <div class="network-item selected" onclick="selectNetwork('BeeHive_5G')">
+                        <span class="network-name">BeeHive_5G</span>
+                        <span class="network-info">📶📶 -68dBm 🔒</span>
+                    </div>
+                    <div class="network-item" onclick="selectNetwork('Garden_Sensor')">
+                        <span class="network-name">Garden_Sensor</span>
+                        <span class="network-info">📶📶 -72dBm 🔒</span>
+                    </div>
+                    <div class="network-item" onclick="selectNetwork('Neighbor_WiFi')">
+                        <span class="network-name">Neighbor_WiFi</span>
+                        <span class="network-info">📶 -85dBm 🔒</span>
+                    </div>
+                    <div class="network-item" onclick="selectNetwork('OpenNetwork')">
+                        <span class="network-name">OpenNetwork</span>
+                        <span class="network-info">📶📶 -70dBm 🔓</span>
+                    </div>
+                </div>
             </div>
             
             <form id="wifiForm" onsubmit="connectWiFi(event)">
                 <div class="form-group">
                     <label>Название сети (SSID)</label>
                     <input type="text" id="ssid" name="ssid" required 
-                           placeholder="Введите название WiFi сети">
+                           placeholder="Введите или выберите сеть" value="BeeHive_5G">
                 </div>
                 
                 <div class="form-group">
                     <label>Пароль</label>
                     <input type="password" id="password" name="password" 
-                           placeholder="Введите пароль (если есть)">
+                           placeholder="Введите пароль (если есть)" value="mypassword123">
                 </div>
                 
                 <button type="submit" class="btn">📡 Подключиться</button>
             </form>
             
-            <div class="status" id="status">
-                <span id="statusText">⏳ Готов к настройке</span>
+            <div class="status success" id="statusMessage">✅ Найдено сетей: 5</div>
+            <div class="small text-center mt-3">
+                Точка доступа: <strong>ESP-Hive-Setup</strong>
             </div>
         </div>
     </div>
 
     <script>
+        // Демо-данные для визуального тестирования
+        const demoNetworks = [
+            { ssid: 'HomeNetwork', rssi: -52, encrypted: true },
+            { ssid: 'BeeHive_5G', rssi: -68, encrypted: true },
+            { ssid: 'Garden_Sensor', rssi: -72, encrypted: true },
+            { ssid: 'Neighbor_WiFi', rssi: -85, encrypted: true },
+            { ssid: 'OpenNetwork', rssi: -70, encrypted: false }
+        ];
+        
         function scanNetworks() {
-            document.getElementById('statusText').innerHTML = '⏳ Сканирование сетей...';
+            const btn = document.getElementById('scanBtn');
+            btn.innerHTML = '<span class="spinner"></span> Сканирование...';
+            btn.disabled = true;
             
-            fetch('/scan')
-                .then(response => response.json())
-                .then(networks => {
-                    let html = '';
-                    networks.forEach(net => {
-                        let lock = net.encrypted ? '🔒' : '🔓';
-                        let signal = '📶';
-                        if (net.rssi > -50) signal = '📶📶📶';
-                        else if (net.rssi > -70) signal = '📶📶';
-                        else signal = '📶';
-                        
-                        html += `
-                            <div class="network-item" onclick="selectNetwork('${net.ssid}')">
-                                <span class="network-name">${net.ssid}</span>
-                                <span>
-                                    <span class="network-signal">${signal} ${net.rssi} dBm</span>
-                                    <span class="lock-icon">${lock}</span>
-                                </span>
-                            </div>
-                        `;
-                    });
-                    
-                    if (networks.length === 0) {
-                        html = '<div style="text-align: center; padding: 20px; color: #999;">Сети не найдены</div>';
-                    }
-                    
-                    document.getElementById('networks').innerHTML = html;
-                    document.getElementById('networksList').style.display = 'block';
-                    document.getElementById('statusText').innerHTML = '✅ Найдено сетей: ' + networks.length;
-                })
-                .catch(error => {
-                    document.getElementById('statusText').innerHTML = '❌ Ошибка сканирования';
+            // В реальном устройстве:
+            // fetch('/scan').then(r => r.json()).then(networks => { ... });
+            
+            // Демо для визуального тестирования
+            setTimeout(() => {
+                let html = '';
+                demoNetworks.forEach(net => {
+                    let lock = net.encrypted ? '🔒' : '🔓';
+                    let signal = net.rssi > -60 ? '📶📶📶' : net.rssi > -75 ? '📶📶' : '📶';
+                    html += `
+                        <div class="network-item" onclick="selectNetwork('${net.ssid}')">
+                            <span class="network-name">${net.ssid}</span>
+                            <span class="network-info">${signal} ${net.rssi}dBm ${lock}</span>
+                        </div>
+                    `;
                 });
+                
+                document.getElementById('networksList').innerHTML = html;
+                document.getElementById('networksContainer').style.display = 'block';
+                showStatus('✅ Найдено сетей: ' + demoNetworks.length, 'success');
+                
+                btn.innerHTML = '🔍 Сканировать сети';
+                btn.disabled = false;
+            }, 1500);
         }
         
         function selectNetwork(ssid) {
             document.getElementById('ssid').value = ssid;
-            document.getElementById('password').focus();
+            document.querySelectorAll('.network-item').forEach(i => i.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
         }
         
-        function connectWiFi(event) {
-            event.preventDefault();
+        function connectWiFi(e) {
+            e.preventDefault();
             
-            const ssid = document.getElementById('ssid').value;
-            const password = document.getElementById('password').value;
-            
+            const ssid = document.getElementById('ssid').value.trim();
             if (!ssid) {
-                alert('Введите название сети');
+                showStatus('❌ Введите название сети', 'error');
                 return;
             }
             
-            document.getElementById('statusText').innerHTML = '⏳ Подключение к ' + ssid + '...';
-            document.querySelector('button[type="submit"]').disabled = true;
+            showStatus('⏳ Подключение...', 'info');
             
-            const formData = new URLSearchParams();
-            formData.append('ssid', ssid);
-            formData.append('password', password);
+            const data = new URLSearchParams();
+            data.append('ssid', ssid);
+            data.append('password', document.getElementById('password').value);
             
-            fetch('/connect', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.text())
-            .then(html => {
-                document.open();
-                document.write(html);
-                document.close();
-            })
-            .catch(error => {
-                document.getElementById('statusText').innerHTML = '❌ Ошибка подключения';
-                document.querySelector('button[type="submit"]').disabled = false;
-            });
+            // В реальном устройстве:
+            // fetch('/connect', { method: 'POST', body: data })
+            //     .then(r => r.text())
+            //     .then(html => { document.open(); document.write(html); document.close(); });
+            
+            // Демо для визуального тестирования
+            setTimeout(() => {
+                showStatus('✅ Подключено к ' + ssid, 'success');
+                setTimeout(() => {
+                    alert('✅ WiFi настроен!\nУстройство перезагрузится и подключится к сети.');
+                }, 500);
+            }, 2000);
         }
         
-        // Автоматически сканируем при загрузке
-        setTimeout(scanNetworks, 500);
+        function showStatus(msg, type) {
+            const el = document.getElementById('statusMessage');
+            el.textContent = msg;
+            el.className = 'status ' + type;
+        }
+        
+        // Автосканирование при загрузке (как в реальном устройстве)
+        // window.onload = () => setTimeout(scanNetworks, 500);
     </script>
 </body>
 </html>

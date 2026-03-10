@@ -2,6 +2,7 @@
 #define MQTT_MANAGER_H
 
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include "config.h"
@@ -9,26 +10,33 @@
 
 #define MQTT_ENABLED 1
 
-WiFiClient espClient;
-PubSubClient mqttClient(espClient);
+
+// Безопасный WiFi клиент для TLS
+WiFiClientSecure secureClient;
+PubSubClient mqttClient(secureClient);
 
 extern int hiveId;
 extern float currentWeight;
 extern float currentTemperature;
 extern float currentBattery;
-extern bool isLogEnabled;  // ← исправлено с uint8_t на bool
+extern bool isLogEnabled;
 
 // ========== ИНИЦИАЛИЗАЦИЯ MQTT ==========
 void initMQTT() {
+    // Настройка TLS сертификатов
+    secureClient.setCACert(ca_cert);
+    secureClient.setCertificate(client_cert);
+    secureClient.setPrivateKey(client_key);
+    
     mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
     mqttClient.setBufferSize(512);
-    LOG_W("MQTT", "MQTT initialized with server %s:%d", MQTT_SERVER, MQTT_PORT);
+    LOG_W("MQTT", "MQTT-TLS initialized with server %s:%d", MQTT_SERVER, MQTT_PORT);
 }
 
 // ========== ПОДКЛЮЧЕНИЕ К MQTT ==========
 void connectMQTT() {
     static uint32_t lastTry = 0;
-    const uint32_t MQTT_CONNECT_TIMEOUT = 5000;
+    const uint32_t MQTT_CONNECT_TIMEOUT = 10000;
 
     if (mqttClient.connected()) return;
     if (millis() - lastTry < MQTT_RECONNECT_DELAY) return;
@@ -40,24 +48,21 @@ void connectMQTT() {
     clientId += "-";
     clientId += String(random(0xffff), HEX);
 
-    LOG_W("MQTT", "Connecting to MQTT as %s...", clientId.c_str());
+    LOG_W("MQTT", "Connecting to MQTT-TLS as %s...", clientId.c_str());
 
     bool connected = false;
     unsigned long connectStart = millis();
 
     while (!connected && (millis() - connectStart < MQTT_CONNECT_TIMEOUT)) {
-        if (strlen(MQTT_USER) > 0) {
-            connected = mqttClient.connect(clientId.c_str(), MQTT_USER, MQTT_PASSWORD);
-        } else {
-            connected = mqttClient.connect(clientId.c_str());
-        }
+        // Подключение без логина/пароля - аутентификация по сертификату
+        connected = mqttClient.connect(clientId.c_str());
         if (!connected) delay(100);
     }
 
     if (connected) {
-        LOG_W("MQTT", "✅ Connected to MQTT broker");
+        LOG_W("MQTT", "✅ Connected to MQTT broker via TLS");
     } else {
-        LOG_W("MQTT", "❌ Connection failed (state: %d)", mqttClient.state());
+        LOG_W("MQTT", "❌ TLS Connection failed (state: %d)", mqttClient.state());
     }
 }
 
@@ -68,7 +73,7 @@ void publishHiveData() {
         return;
     }
 
-    StaticJsonDocument<256> doc;
+    JsonDocument doc;
     doc["hive_id"] = hiveId;
     doc["weight"] = currentWeight;
     doc["temp_in"] = currentTemperature;

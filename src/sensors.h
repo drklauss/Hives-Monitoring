@@ -46,11 +46,32 @@ void readSensors() {
     }
     currentWeight = (validReadings > 0) ? weightSum / validReadings : 0;
     
-    // Чтение температуры
-    ds18b20.requestTemperatures();
-    currentTemperature = ds18b20.getTempCByIndex(0);
-    if (currentTemperature == DEVICE_DISCONNECTED_C) {
-        currentTemperature = -127.0f;
+    // Чтение температуры (медианный фильтр для 3 измерений)
+    float tempValues[3];
+    int tempReadings = 0;
+    
+    for (int i = 0; i < 3; i++) {
+        ds18b20.requestTemperatures();
+        float temp = ds18b20.getTempCByIndex(0);
+        if (temp != DEVICE_DISCONNECTED_C && temp > -50.0f && temp < 100.0f) {
+            tempValues[tempReadings++] = temp;
+        }
+        delay(50);
+    }
+    
+    if (tempReadings == 3) {
+        // Медианный фильтр: берём среднее из трёх значений
+        if (tempValues[0] > tempValues[1]) { float t = tempValues[0]; tempValues[0] = tempValues[1]; tempValues[1] = t; }
+        if (tempValues[1] > tempValues[2]) { float t = tempValues[1]; tempValues[1] = tempValues[2]; tempValues[2] = t; }
+        if (tempValues[0] > tempValues[1]) { float t = tempValues[0]; tempValues[0] = tempValues[1]; tempValues[1] = t; }
+        currentTemperature = tempValues[1];  // Медиана
+    } else if (tempReadings > 0) {
+        // Если не все измерения успешны, берём среднее из того что есть
+        float sum = 0;
+        for (int i = 0; i < tempReadings; i++) sum += tempValues[i];
+        currentTemperature = sum / tempReadings;
+    } else {
+        currentTemperature = -127.0f;  // Ошибка датчика
     }
     
     // Чтение напряжения батареи

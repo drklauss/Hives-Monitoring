@@ -8,8 +8,8 @@
  #include "settings.h"
  #include "sensors.h"
  #include "hive_control.h"
- #include "button_manager.h"  // Новый файл
- #include "system_modes.h"    // Новый файл
+ #include "button_manager.h"
+ #include "system_modes.h"
  #include "wifi_manager.h"
  #include "mqtt_manager.h"
  #include "web_server.h"
@@ -19,20 +19,24 @@
      Serial.begin(115200);
      delay(100);
      
-     // Инициализация оборудования
+     // Инициализация оборудования (определяет причину пробуждения)
      initHardware();
      
      // Загрузка настроек из EEPROM
      loadSettings();
      
-     // Проверка кнопок
-     checkResetButton();      // Долгое нажатие - сброс настроек
-     checkOTAModeButton();    // Короткое нажатие - OTA режим
+     // Если пробуждение по кнопке (GPIO), проверяем тип нажатия
+     if (wakeupReason == WAKEUP_REASON_GPIO) {
+         checkButton();  // Определяет: короткое = Debug, длинное = Config
+     }
      
-     // Определяем режим работы
-     if (forceOTAMode || wakeupReason != WAKEUP_REASON_TIMER) {
+     // Определяем режим работы на основе buttonMode
+     if (buttonMode == BUTTON_MODE_CONFIG) {
          // Режим конфигурации (AP + captive portal)
          runConfigurationMode();
+     } else if (buttonMode == BUTTON_MODE_DEBUG) {
+         // Debug режим (подключение к WiFi + веб-интерфейс + OTA)
+         runDebugMode();
      } else {
          // Нормальный режим (сбор данных и отправка)
          runNormalMode();
