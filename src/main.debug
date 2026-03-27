@@ -1,0 +1,182 @@
+/*
+ * HX711 DEBUG SKETCH
+ * Загрузите этот скетч отдельно для отладки весов
+ * Подключение: DT - GPIO4, SCK - GPIO5
+ */
+
+#include <HX711.h>
+
+// Пины
+#define PIN_HX711_DT 4
+#define PIN_HX711_SCK 5
+
+// Текущие параметры (меняйте в процессе экспериментов)
+float scaleFactor = 56000.0f;    // Попробуйте менять знак и значение
+int32_t rawOffset = -1557550;       // Ваше сырое значение пустого улья
+
+HX711 scale;
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+  
+  Serial.println("\n\n=== HX711 DEBUG MODE ===");
+  Serial.println("Commands:");
+  Serial.println("  r         - read raw value");
+  Serial.println("  w         - read weight (with current settings)");
+  Serial.println("  z         - set current raw as ZERO (new offset)");
+  Serial.println("  k [value] - set scale factor (e.g., k -43130)");
+  Serial.println("  o [value] - set offset (e.g., o 1561830)");
+  Serial.println("  t         - tare (set current as zero)");
+  Serial.println("  c         - calibration mode (two-step)");
+  Serial.println("  ?         - show this help");
+  Serial.println();
+  
+  // Инициализация HX711
+  scale.begin(PIN_HX711_DT, PIN_HX711_SCK);
+  
+  // Применяем настройки
+  scale.set_scale(scaleFactor);
+  scale.set_offset(rawOffset);
+  
+  Serial.print("Initial settings: scale=");
+  Serial.print(scaleFactor);
+  Serial.print(", offset=");
+  Serial.println(rawOffset);
+  Serial.println();
+}
+
+// k 56000 o -1557550
+void loop() {
+  if (Serial.available()) {
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
+    
+    if (cmd == "r") {
+      // Читаем сырое значение
+      if (scale.is_ready()) {
+        long raw = scale.read();
+        Serial.print("RAW: ");
+        Serial.println(raw);
+      } else { 
+        Serial.println("HX711 not ready");
+      }
+    }
+    else if (cmd == "w") {
+      // Читаем вес с текущими настройками
+      if (scale.is_ready()) {
+        float weight = scale.get_units(5);
+        long raw = scale.read();
+        
+        Serial.print("RAW: ");
+        Serial.print(raw);
+        Serial.print(", WEIGHT: ");
+        Serial.print(weight, 3);
+        Serial.print(" kg, ");
+        Serial.print("(offset=");
+        Serial.print(scale.get_offset());
+        Serial.print(", scale=");
+        Serial.print(scale.get_scale());
+        Serial.println(")");
+      } else {
+        Serial.println("HX711 not ready");
+      }
+    }
+    else if (cmd == "z") {
+      // Установить текущее значение как ноль (новый offset)
+      if (scale.is_ready()) {
+        rawOffset = scale.read();
+        scale.set_offset(rawOffset);
+        Serial.print("New offset set to: ");
+        Serial.println(rawOffset);
+      } else {
+        Serial.println("HX711 not ready");
+      }
+    }
+    else if (cmd.startsWith("k ")) {
+      // Изменить scale factor
+      float newScale = cmd.substring(2).toFloat();
+      if (newScale != 0) {
+        scaleFactor = newScale;
+        scale.set_scale(scaleFactor);
+        Serial.print("Scale factor set to: ");
+        Serial.println(scaleFactor);
+      }
+    }
+    else if (cmd.startsWith("o ")) {
+      // Изменить offset
+      long newOffset = cmd.substring(2).toInt();
+      rawOffset = newOffset;
+      scale.set_offset(rawOffset);
+      Serial.print("Offset set to: ");
+      Serial.println(rawOffset);
+    }
+    else if (cmd == "t") {
+      // Tare - установить текущее как ноль
+      if (scale.is_ready()) {
+        scale.tare();
+        rawOffset = scale.get_offset();
+        Serial.print("Tare complete. New offset: ");
+        Serial.println(rawOffset);
+      } else {
+        Serial.println("HX711 not ready");
+      }
+    }
+    else if (cmd == "c") {
+      // Двухшаговая калибровка
+      Serial.println("\n=== CALIBRATION MODE ===");
+      Serial.println("Step 1: Remove all weight, then press ENTER");
+      while (Serial.available()) Serial.read();
+      Serial.readStringUntil('\n');
+      
+      // Запоминаем пустой улей
+      if (scale.is_ready()) {
+        long emptyRaw = scale.read();
+        Serial.print("Empty raw value: ");
+        Serial.println(emptyRaw);
+        
+        Serial.println("Step 2: Put known weight (e.g., 5kg) and enter weight in kg:");
+        while (!Serial.available()) delay(100);
+        float knownWeight = Serial.readStringUntil('\n').toFloat();
+        
+        if (knownWeight > 0) {
+          long loadedRaw = scale.read();
+          Serial.print("Loaded raw value: ");
+          Serial.println(loadedRaw);
+          
+          // Вычисляем коэффициент
+          long diff = loadedRaw - emptyRaw;
+          float newScale = diff / knownWeight;
+          
+          Serial.println("\n=== CALIBRATION RESULT ===");
+          Serial.print("Empty raw (offset): ");
+          Serial.println(emptyRaw);
+          Serial.print("Difference: ");
+          Serial.print(diff);
+          Serial.print(" for ");
+          Serial.print(knownWeight, 3);
+          Serial.println(" kg");
+          Serial.print("Scale factor: ");
+          Serial.println(newScale, 6);
+          Serial.print("Recommended command: o ");
+          Serial.print(emptyRaw);
+          Serial.print(" && k ");
+          Serial.println(newScale, 6);
+        }
+      }
+    }
+    else if (cmd == "?") {
+      Serial.println("Commands:");
+      Serial.println("  r         - read raw value");
+      Serial.println("  w         - read weight");
+      Serial.println("  z         - set current raw as ZERO");
+      Serial.println("  k [value] - set scale factor");
+      Serial.println("  o [value] - set offset");
+      Serial.println("  t         - tare");
+      Serial.println("  c         - calibration mode");
+      Serial.println("  ?         - help");
+    }
+  }
+  
+  delay(50);
+}

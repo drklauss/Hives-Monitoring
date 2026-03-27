@@ -8,10 +8,8 @@
 struct Settings {
     int hive_id;
     float scale_factor;
-    float offset;
+    float scale_offset;
     uint32_t sleep_interval;
-    bool log_enabled;
-    uint8_t button_mode;       // BUTTON_MODE_NORMAL, BUTTON_MODE_DEBUG, BUTTON_MODE_CONFIG
     char wifi_ssid[32];
     char wifi_password[64];
     uint32_t magic;
@@ -19,25 +17,24 @@ struct Settings {
 } settings;
 
 const uint32_t MAGIC_NUMBER = 0xDEADBEEF;
-const uint32_t SETTINGS_VERSION = 3;  // Версия 3: force_ota -> button_mode
+const uint32_t SETTINGS_VERSION = 1;
 
+// Глобальные переменные (инициализация)
 int hiveId = DEFAULT_HIVE_ID;
 float scaleFactor = HX711_SCALE_FACTOR;
-float offset = HX711_OFFSET;
+float scaleOffset = HX711_SCALE_OFFSET;
 uint32_t sleepInterval = DEFAULT_SLEEP_INTERVAL;
-bool isLogEnabled = DEFAULT_LOG_ENABLED;
-uint8_t buttonMode = BUTTON_MODE_NORMAL;
-uint8_t wakeupReason = WAKEUP_REASON_TIMER;
-void saveSettings();
+bool isLogEnabled = DEBUG_MODE;
+
+// Прототипы
+void saveHiveSettings();
 void resetSettings();
 
 void resetToDefaults() {
     settings.hive_id = DEFAULT_HIVE_ID;
     settings.scale_factor = HX711_SCALE_FACTOR;
-    settings.offset = HX711_OFFSET;
+    settings.scale_offset = HX711_SCALE_OFFSET;
     settings.sleep_interval = DEFAULT_SLEEP_INTERVAL;
-    settings.log_enabled = DEFAULT_LOG_ENABLED;
-    settings.button_mode = BUTTON_MODE_NORMAL;
     strcpy(settings.wifi_ssid, WIFI_SSID);
     strcpy(settings.wifi_password, WIFI_PASSWORD);
     settings.magic = MAGIC_NUMBER;
@@ -48,32 +45,22 @@ void resetToDefaults() {
     
     hiveId = DEFAULT_HIVE_ID;
     scaleFactor = HX711_SCALE_FACTOR;
-    offset = HX711_OFFSET;
+    scaleOffset = HX711_SCALE_OFFSET;
     sleepInterval = DEFAULT_SLEEP_INTERVAL;
-    isLogEnabled = DEFAULT_LOG_ENABLED;
-    buttonMode = BUTTON_MODE_NORMAL;
+    isLogEnabled = DEBUG_MODE;
 }
 
 void resetSettings() {
-    LOG_W("SETTINGS", "⚠️ Factory reset - clearing all settings");
-    
-    // Clear EEPROM
-    for (int i = 0; i < sizeof(Settings); i++) {
-        EEPROM.write(i, 0);
-    }
+    LOG_W("SETTINGS", "⚠️ Factory reset");
+    for (int i = 0; i < sizeof(Settings); i++) EEPROM.write(i, 0);
     EEPROM.commit();
-    
-    // Reset to defaults
     resetToDefaults();
 }
 
-void saveSettings() {
+void saveHiveSettings() {
     settings.hive_id = hiveId;
     settings.scale_factor = scaleFactor;
-    settings.offset = offset;
     settings.sleep_interval = sleepInterval;
-    settings.log_enabled = isLogEnabled;
-    settings.button_mode = buttonMode;
     settings.magic = MAGIC_NUMBER;
     settings.version = SETTINGS_VERSION;
     
@@ -89,29 +76,14 @@ void loadSettings() {
         if (settings.version == SETTINGS_VERSION) {
             hiveId = settings.hive_id;
             scaleFactor = settings.scale_factor;
-            offset = settings.offset;
+            scaleOffset = settings.scale_offset;  
             sleepInterval = settings.sleep_interval;
-            isLogEnabled = settings.log_enabled;
-            buttonMode = settings.button_mode;
-        } else if (settings.version == 2) {
-            // Миграция с версии 2 (force_ota -> button_mode)
-            hiveId = settings.hive_id;
-            scaleFactor = settings.scale_factor;
-            offset = settings.offset;
-            sleepInterval = settings.sleep_interval;
-            isLogEnabled = settings.log_enabled;
-            // force_ota был bool, конвертируем в button_mode
-            buttonMode = BUTTON_MODE_NORMAL;
-            saveSettings();
         } else {
-            // Миграция с версии 1
             hiveId = settings.hive_id;
             scaleFactor = settings.scale_factor;
-            offset = settings.offset;
+            scaleOffset = settings.scale_offset;
             sleepInterval = settings.sleep_interval;
-            isLogEnabled = DEFAULT_LOG_ENABLED;
-            buttonMode = BUTTON_MODE_NORMAL;
-            saveSettings();
+            saveHiveSettings();
         }
     } else {
         resetToDefaults();

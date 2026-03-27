@@ -1,92 +1,79 @@
 #ifndef SENSORS_H
 #define SENSORS_H
 
-#include <OneWire.h>
-#include <DallasTemperature.h>
 #include <HX711.h>
+#include <Adafruit_AHTX0.h>
 #include "config.h"
 
-// Глобальные переменные для датчиков
+// Глобальные переменные датчиков
 float currentWeight = 0.0f;
 float currentTemperature = 0.0f;
+float currentHumidity = 0.0f;
 float currentBattery = 0.0f;
 
 // Объекты датчиков
 HX711 scale;
-OneWire oneWire(PIN_DS18B20);
-DallasTemperature ds18b20(&oneWire);
+Adafruit_AHTX0 aht;
 
 extern float scaleFactor;
-extern float offset;
+extern float scaleOffset;
 
-void initSensors() {
+void initSensors()
+{
+    // Инициализация HX711
     scale.begin(PIN_HX711_DT, PIN_HX711_SCK);
     scale.set_scale(scaleFactor);
-    scale.set_offset(offset);
+    scale.set_offset(scaleOffset);
     scale.power_up();
-    
-    ds18b20.begin();
-    ds18b20.setResolution(10);
-    
+
+    // Инициализация I2C и AHT20
+    Wire.begin(I2C_SDA, I2C_SCL);
+
+    if (!aht.begin())
+    {
+        LOG_W("SENSORS", "❌ AHT20 not found! Check wiring.");
+        currentTemperature = -127.0f;
+        currentHumidity = -1.0f;
+    }
+    else
+    {
+        LOG_W("SENSORS", "✅ AHT20 initialized");
+    }
+
     analogReadResolution(12);
 }
 
-void readSensors() {
-    LOG_W("SENSORS", "Reading sensors...");
-    
-    // Чтение веса (усредняем несколько измерений)
-    float weightSum = 0;
-    int validReadings = 0;
-    for (int i = 0; i < 10; i++) {
-        if (scale.is_ready()) {
-            weightSum += scale.get_units();
-            validReadings++;
-        }
-        delay(50);
-    }
-    currentWeight = (validReadings > 0) ? weightSum / validReadings : 0;
-    
-    // Чтение температуры (медианный фильтр для 3 измерений)
-    float tempValues[3];
-    int tempReadings = 0;
-    
-    for (int i = 0; i < 3; i++) {
-        ds18b20.requestTemperatures();
-        float temp = ds18b20.getTempCByIndex(0);
-        if (temp != DEVICE_DISCONNECTED_C && temp > -50.0f && temp < 100.0f) {
-            tempValues[tempReadings++] = temp;
-        }
-        delay(50);
-    }
-    
-    if (tempReadings == 3) {
-        // Медианный фильтр: берём среднее из трёх значений
-        if (tempValues[0] > tempValues[1]) { float t = tempValues[0]; tempValues[0] = tempValues[1]; tempValues[1] = t; }
-        if (tempValues[1] > tempValues[2]) { float t = tempValues[1]; tempValues[1] = tempValues[2]; tempValues[2] = t; }
-        if (tempValues[0] > tempValues[1]) { float t = tempValues[0]; tempValues[0] = tempValues[1]; tempValues[1] = t; }
-        currentTemperature = tempValues[1];  // Медиана
-    } else if (tempReadings > 0) {
-        // Если не все измерения успешны, берём среднее из того что есть
-        float sum = 0;
-        for (int i = 0; i < tempReadings; i++) sum += tempValues[i];
-        currentTemperature = sum / tempReadings;
-    } else {
-        currentTemperature = -127.0f;  // Ошибка датчика
-    }
-    
-    // Чтение напряжения батареи
-    int adcValue = analogRead(PIN_BATTERY);
-    float voltage = (adcValue * ADC_REF_VOLTAGE) / ADC_MAX_VALUE;
-    currentBattery = voltage * BATTERY_DIVIDER_RATIO;
-    
-    LOG_W("SENSORS", "Weight: %.1f kg, Temp: %.1f°C, Batt: %.2fV",          currentWeight, currentTemperature, currentBattery);
-}
+void readSensors()
+{
+    LOG_W("SENSORS", "Reading...");
 
-float getBatteryPercent() {
-    // Приблизительная оценка для Li-ion 4.2V -> 3.3V
-    if (currentBattery >= 4.0) return 100.0f;
-    if (currentBattery <= 3.3) return 0.0f;
-    return ((currentBattery - 3.3) / 0.9) * 100.0f;
+    // Чтение веса
+    if (scale.is_ready())
+    {
+        currentWeight = scale.get_units(10);
+    }
+    delay(50);
+
+    // Чтение температуры и влажности с AHT20
+    sensors_event_t humidity, temp;
+    if (aht.getEvent(&humidity, &temp))
+    {
+        currentTemperature = temp.temperature;
+        currentHumidity = humidity.relative_humidity;
+        LOG_W("SENSORS", "AHT20: T=%.1f°C, H=%.1f%%", currentTemperature, currentHumidity);
+    }
+    else
+    {
+        LOG_W("SENSORS", "⚠️ AHT20 read error");
+        // Если ошибка, оставляем предыдущие значения
+    }
+    delay(50);
+
+    // Чтение напряжения батареи
+    int adc = analogRead(PIN_BATTERY);
+    currentBattery = (adc * ADC_REF_VOLTAGE / ADC_MAX_VALUE) * BAT_DIVIDER_RATIO;
+
+    LOG_W("SENSORS", "W:%.1f T:%.1f H:%.1f B:%.2f", currentWeight, currentTemperature, currentHumidity, currentBattery);
 }
 
 #endif

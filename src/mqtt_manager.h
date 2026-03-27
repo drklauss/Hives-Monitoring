@@ -39,6 +39,7 @@ void connectMQTT() {
     const uint32_t MQTT_CONNECT_TIMEOUT = 10000;
 
     if (mqttClient.connected()) return;
+    const uint32_t MQTT_RECONNECT_DELAY = 5000;  // 5 секунд между попытками
     if (millis() - lastTry < MQTT_RECONNECT_DELAY) return;
 
     lastTry = millis();
@@ -77,6 +78,7 @@ void publishHiveData() {
     doc["hive_id"] = hiveId;
     doc["weight"] = currentWeight;
     doc["temp_in"] = currentTemperature;
+    doc["humidity"] = currentHumidity;  // добавляем влажность
     doc["bat"] = currentBattery;
     
     float battPercent = 0;
