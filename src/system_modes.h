@@ -8,12 +8,14 @@
 #include "ota_manager.h"
 #include "sensors.h"
 #include "hive_control.h"
+#include "led.h"
 
 // Глобальная переменная для отслеживания активности
 unsigned long lastActivity = 0;
 
 void runConfigMode() {
-    LOG_W("MODE", "⚙️ Starting config/debug mode");
+    // Быстрые мигания для индикации режима конфигурации
+   ledInfo(START_CONFIG, 100);
     
     // Читаем датчики сразу для отображения
     readSensors();
@@ -28,19 +30,13 @@ void runConfigMode() {
     // Запоминаем время старта
     lastActivity = millis();
     
-    LOG_W("MODE", "Connect to WiFi: %s", AP_SSID);
-    LOG_W("MODE", "Open http://%s in browser", WiFi.softAPIP().toString().c_str());
-    LOG_W("MODE", "Will sleep after %d seconds of inactivity", CONFIG_MODE_TIMEOUT / 1000);
-    
     // Основной цикл
     while (true) {
         handleWebServer();
-        handleOTA();
+        // handleOTA();
         
         // Проверяем таймаут бездействия
         if (millis() - lastActivity > CONFIG_MODE_TIMEOUT) {
-            LOG_W("MODE", "⏰ Inactivity timeout - going to sleep");
-            
             goToSleep();
         }
         

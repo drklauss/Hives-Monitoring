@@ -1,38 +1,38 @@
 #ifndef HIVE_CONTROL_H
 #define HIVE_CONTROL_H
 
+#include <WiFi.h>
 #include "config.h"
 #include "sensors.h"
-
-// RTC переменные
+#include "led.h"
 
 extern HX711 scale;
 
+
 void initHardware() {
     pinMode(PIN_BUTTON, INPUT_PULLUP);
-    
+    initLED();
     initSensors();
-    
-    // Определяем причину пробуждения (только для информации)
-    esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
-    
-    if (cause == ESP_SLEEP_WAKEUP_TIMER) {
-        LOG_W("HIVE", "Wakeup by timer");
-    } else {
-        LOG_W("HIVE", "Power-on reset");
-    }
 }
 
 void goToSleep() {
-    LOG_W("HIVE", "😴 Sleep for %d s", sleepInterval);
-    
-    // Только таймер! Никакого пробуждения по GPIO
     esp_sleep_enable_timer_wakeup(sleepInterval * 1000000ULL);
     
     scale.power_down();
     
+    // Важно: отключаем подтяжку на GPIO0 (BOOT) перед сном
+    // GPIO0 используется для выбора режима загрузки
+    // Если оставить INPUT_PULLUP, это может помешать загрузке после пробуждения
+    pinMode(PIN_BUTTON, INPUT);
+    digitalWrite(PIN_BUTTON, HIGH);  // Отпускаем подтяжку
+    
+    // Отключаем WiFi полностью
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    
     Serial.flush();
-    delay(10);
+    delay(100);  // Даем время на завершение всех операций
+    
     esp_deep_sleep_start();
 }
 

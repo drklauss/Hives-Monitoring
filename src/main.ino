@@ -9,47 +9,40 @@
 #include "mqtt_manager.h"
 #include "web_server.h"
 #include "ota_manager.h"
+#include "led.h"
 
-void setup() {
-    Serial.begin(115200);
-    delay(100);
+
+
+void setup()
+{
+    isLogEnabled = DEBUG_MODE;
+
     
     initHardware();
     loadSettings();
-    
+
     // Проверяем кнопку при старте
-    bool configMode = checkButtonAtBoot();
-    
-    if (configMode) {
-        // Режим настройки + отладки
-        LOG_W("MAIN", "Starting CONFIG/DEBUG mode");
-        runConfigMode();
-    } else {
-        // Нормальный режим
-        LOG_W("MAIN", "Starting NORMAL mode");
-        
-        // Пытаемся подключиться к WiFi
-        if (connectToWiFiWithTimeout(30000)) {
-            // WiFi есть - читаем датчики и отправляем
-            readSensors();
-            initMQTT();
-            
-            for (int i = 0; i < 10 && !mqttClient.connected(); i++) {
-                handleMQTT();
-                delay(500);
-            }
-            
-            if (mqttClient.connected()) {
-                publishHiveData();
-            }
-            
-            WiFi.disconnect(true);
-            WiFi.mode(WIFI_OFF);
-        } else {
-            // WiFi нет - просто спим
-            LOG_W("MAIN", "No WiFi, sleeping until next cycle");
+    if (checkButtonAtBoot())
+    {
+        runConfigMode(); // Режим настройки + отладки
+    }
+    else
+    {
+        ledSuccess(START, 400);
+
+        if (connectToWiFiWithTimeout(15000))
+        {
+            readSensors();  // Читаем датчики
+            sendMQTTData(); // Отправляем MQTT с полным циклом
+            delay(500);     // Короткая пауза перед отключением
         }
-        
+        else
+        {
+            // WiFi нет
+            ledError(WIFI_ERR, 200);
+            delay(1000);
+        }
+
         goToSleep();
     }
 }

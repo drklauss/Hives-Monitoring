@@ -50,7 +50,7 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
                     </div>
                     <div>
                         <label for="sleep_interval">Интервал сна (сек)</label>
-                        <input type="number" id="sleep_interval" name="sleep_interval" min="300" max="86400" value="{SLEEP}" required>
+                        <input type="number" id="sleep_interval" name="sleep_interval" min="60" max="86400" value="{SLEEP}" required>
                     </div>
                 </div>
                 <button type="submit">💾 Сохранить</button>

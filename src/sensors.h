@@ -31,13 +31,8 @@ void initSensors()
 
     if (!aht.begin())
     {
-        LOG_W("SENSORS", "❌ AHT20 not found! Check wiring.");
         currentTemperature = -127.0f;
         currentHumidity = -1.0f;
-    }
-    else
-    {
-        LOG_W("SENSORS", "✅ AHT20 initialized");
     }
 
     analogReadResolution(12);
@@ -45,8 +40,6 @@ void initSensors()
 
 void readSensors()
 {
-    LOG_W("SENSORS", "Reading...");
-
     // Чтение веса
     if (scale.is_ready())
     {
@@ -60,20 +53,12 @@ void readSensors()
     {
         currentTemperature = temp.temperature;
         currentHumidity = humidity.relative_humidity;
-        LOG_W("SENSORS", "AHT20: T=%.1f°C, H=%.1f%%", currentTemperature, currentHumidity);
-    }
-    else
-    {
-        LOG_W("SENSORS", "⚠️ AHT20 read error");
-        // Если ошибка, оставляем предыдущие значения
     }
     delay(50);
 
     // Чтение напряжения батареи
     int adc = analogRead(PIN_BATTERY);
     currentBattery = (adc * ADC_REF_VOLTAGE / ADC_MAX_VALUE) * BAT_DIVIDER_RATIO;
-
-    LOG_W("SENSORS", "W:%.1f T:%.1f H:%.1f B:%.2f", currentWeight, currentTemperature, currentHumidity, currentBattery);
 }
 
 #endif

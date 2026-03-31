@@ -51,7 +51,6 @@ void resetToDefaults() {
 }
 
 void resetSettings() {
-    LOG_W("SETTINGS", "⚠️ Factory reset");
     for (int i = 0; i < sizeof(Settings); i++) EEPROM.write(i, 0);
     EEPROM.commit();
     resetToDefaults();
@@ -60,6 +59,7 @@ void resetSettings() {
 void saveHiveSettings() {
     settings.hive_id = hiveId;
     settings.scale_factor = scaleFactor;
+    settings.scale_offset = scaleOffset;
     settings.sleep_interval = sleepInterval;
     settings.magic = MAGIC_NUMBER;
     settings.version = SETTINGS_VERSION;
@@ -73,16 +73,12 @@ void loadSettings() {
     EEPROM.get(0, settings);
     
     if (settings.magic == MAGIC_NUMBER) {
-        if (settings.version == SETTINGS_VERSION) {
-            hiveId = settings.hive_id;
-            scaleFactor = settings.scale_factor;
-            scaleOffset = settings.scale_offset;  
-            sleepInterval = settings.sleep_interval;
-        } else {
-            hiveId = settings.hive_id;
-            scaleFactor = settings.scale_factor;
-            scaleOffset = settings.scale_offset;
-            sleepInterval = settings.sleep_interval;
+        hiveId = settings.hive_id;
+        scaleFactor = settings.scale_factor;
+        scaleOffset = settings.scale_offset;  
+        sleepInterval = settings.sleep_interval;
+        
+        if (settings.version != SETTINGS_VERSION) {
             saveHiveSettings();
         }
     } else {

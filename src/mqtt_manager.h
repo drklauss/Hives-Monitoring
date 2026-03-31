@@ -7,105 +7,111 @@
 #include <ArduinoJson.h>
 #include "config.h"
 #include "secrets.h"
+#include "led.h"
 
-#define MQTT_ENABLED 1
+#define MQTT_MAX_RETRIES 3
+#define MQTT_RETRY_DELAY 1000
+#define MQTT_PUBLISH_RETRIES 2
+#define MQTT_CONNECT_TIMEOUT 10000
 
-
-// Безопасный WiFi клиент для TLS
 WiFiClientSecure secureClient;
 PubSubClient mqttClient(secureClient);
 
 extern int hiveId;
 extern float currentWeight;
 extern float currentTemperature;
+extern float currentHumidity;
 extern float currentBattery;
-extern bool isLogEnabled;
 
 // ========== ИНИЦИАЛИЗАЦИЯ MQTT ==========
 void initMQTT() {
-    // Настройка TLS сертификатов
     secureClient.setCACert(ca_cert);
     secureClient.setCertificate(client_cert);
     secureClient.setPrivateKey(client_key);
     
+    secureClient.setTimeout(10);          
+    secureClient.setHandshakeTimeout(10);
+    
     mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
     mqttClient.setBufferSize(512);
-    LOG_W("MQTT", "MQTT-TLS initialized with server %s:%d", MQTT_SERVER, MQTT_PORT);
+    mqttClient.setKeepAlive(30);
 }
 
 // ========== ПОДКЛЮЧЕНИЕ К MQTT ==========
-void connectMQTT() {
-    static uint32_t lastTry = 0;
-    const uint32_t MQTT_CONNECT_TIMEOUT = 10000;
-
-    if (mqttClient.connected()) return;
-    const uint32_t MQTT_RECONNECT_DELAY = 5000;  // 5 секунд между попытками
-    if (millis() - lastTry < MQTT_RECONNECT_DELAY) return;
-
-    lastTry = millis();
-
+bool connectMQTT() {
+    if (mqttClient.connected()) return true;
+    
     String clientId = "Hive-";
     clientId += String(hiveId);
-    clientId += "-";
-    clientId += String(random(0xffff), HEX);
 
-    LOG_W("MQTT", "Connecting to MQTT-TLS as %s...", clientId.c_str());
-
-    bool connected = false;
-    unsigned long connectStart = millis();
-
-    while (!connected && (millis() - connectStart < MQTT_CONNECT_TIMEOUT)) {
-        // Подключение без логина/пароля - аутентификация по сертификату
-        connected = mqttClient.connect(clientId.c_str());
-        if (!connected) delay(100);
+    ledInfo(MQTT_CON_TRY, 200);
+    
+    unsigned long start = millis();
+    while (!mqttClient.connected() && (millis() - start) < MQTT_CONNECT_TIMEOUT) {
+        if (mqttClient.connect(clientId.c_str())) {
+            ledSuccess(MQTT_CON_CONNECTED, 200); 
+            return true;
+        }
+        delay(500);
     }
+    
+    ledError(MQTT_CON_ERR, 300); 
 
-    if (connected) {
-        LOG_W("MQTT", "✅ Connected to MQTT broker via TLS");
-    } else {
-        LOG_W("MQTT", "❌ TLS Connection failed (state: %d)", mqttClient.state());
-    }
+    return false;
 }
 
 // ========== ПУБЛИКАЦИЯ ДАННЫХ ==========
-void publishHiveData() {
+bool publishHiveData() {
     if (!mqttClient.connected()) {
-        LOG_W("MQTT", "Cannot publish - not connected");
-        return;
+        if (!connectMQTT()) return false;
     }
-
+    
+    mqttClient.loop();
+    
     JsonDocument doc;
     doc["hive_id"] = hiveId;
     doc["weight"] = currentWeight;
     doc["temp_in"] = currentTemperature;
-    doc["humidity"] = currentHumidity;  // добавляем влажность
+    doc["humidity"] = currentHumidity;
     doc["bat"] = currentBattery;
-    
-    float battPercent = 0;
-    if (currentBattery >= 4.0) battPercent = 100;
-    else if (currentBattery <= 3.3) battPercent = 0;
-    else battPercent = ((currentBattery - 3.3) / 0.7) * 100;
-    
-    doc["bat_pct"] = battPercent;
     doc["rssi"] = WiFi.RSSI();
     
     String payload;
     serializeJson(doc, payload);
-
-    LOG_W("MQTT", "📤 Publishing to %s", MQTT_TOPIC_HIVE);
     
-    if (mqttClient.publish(MQTT_TOPIC_HIVE, payload.c_str(), false)) {
-        LOG_W("MQTT", "✅ Published successfully");
-    } else {
-        LOG_W("MQTT", "❌ Publish failed");
+    ledInfo(MQTT_SEND_TRY, 100); 
+    
+    // Публикация с повторными попытками
+    for (int attempt = 1; attempt <= MQTT_PUBLISH_RETRIES; attempt++) {
+        if (mqttClient.publish(MQTT_TOPIC_HIVE, payload.c_str(), true)) {
+            ledSuccess(MQTT_SENT, 200); 
+
+            return true;
+        }
+        delay(300);
+        mqttClient.loop();
     }
-    delay(100);
+    
+    ledError(MQTT_SEND_ERR, 300);
+
+    return false;
 }
 
-// ========== ОБРАБОТКА MQTT ==========
-void handleMQTT() {
-    if (!mqttClient.connected()) connectMQTT();
-    if (mqttClient.connected()) mqttClient.loop();
+// ========== ОТПРАВКА С ПОЛНЫМ ЦИКЛОМ ==========
+bool sendMQTTData() {
+    initMQTT();
+    
+    if (!connectMQTT()) return false;
+    
+    delay(100);  
+    mqttClient.loop();
+    
+    bool result = publishHiveData();
+    
+    mqttClient.loop();
+    mqttClient.disconnect();
+    
+    return result;
 }
 
 #endif

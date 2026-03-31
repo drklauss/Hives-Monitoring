@@ -11,6 +11,13 @@
 #define I2C_SCL 3   // GPIO3
 #define PIN_HX711_DT 4
 #define PIN_HX711_SCK 5
+#define PIN_LED_GREEN  7   // Работает, но может мигнуть при старте
+#define PIN_LED_RED    6   // Безопасный пин
+
+// ========== СВЕТОДИОД (ОТЛАДКА) ==========
+// Светодиод используется для индикации состояния без Serial
+// Внешний светодиод: анод на GPIO7, катод на GND через резистор 220-330 Ом
+#define LED_BLINK_DURATION 100  // Длительность мигания (мс)
 
 
 
@@ -44,13 +51,6 @@
 #ifndef DEBUG_MODE
 #define DEBUG_MODE 0  // По умолчанию отладка выключена
 #endif
-
-// ========== МАКРОС ЛОГИРОВАНИЯ ==========
-#define LOG_W(tag, ...) \
-    if (isLogEnabled) { \
-        Serial.printf("[WARN] [" tag "] " __VA_ARGS__); \
-        Serial.println(); \
-    }
 
 // ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
 extern int hiveId;

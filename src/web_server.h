@@ -198,8 +198,6 @@ void initWebServer() {
     
     server.begin();
     dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
-    
-    LOG_W("WEB", "✅ Server ready");
 }
 
 void handleWebServer() {
