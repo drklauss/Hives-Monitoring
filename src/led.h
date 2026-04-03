@@ -15,7 +15,7 @@
  * 
  * СИНИЙ (ledInfo)
  * ------------------------------------------------------------
- * MQTT_CON_TRY (1)   | 1 миг (200мс)  | Попытка подключения MQTT
+ * CONN_TRY (1)   | 1 миг  | Попытка подключения WiFi/MQTT
  * MQTT_SEND_TRY (2)  | 1 миг (100мс)  | Попытка отправки данных
  * START_CONFIG (3)   | быстрые миги   | Вход в режим настройки
  * 
@@ -33,23 +33,11 @@
  * [СИН MQTT_SEND_TRY] -> [ЗЕЛ MQTT_SENT]
  * 
  * ============================================================
- * БЫСТРАЯ ДИАГНОСТИКА:
- * ------------------------------------------------------------
- * 1x зеленый (400мс)  -> старт OK
- * 1x синий (200мс)    -> попытка MQTT
- * 2x зеленый (200мс)  -> MQTT готов
- * 1x синий (100мс)    -> отправка
- * 1x зеленый (200мс)  -> данные отправлены
- * 1x красный (200мс)  -> ошибка WiFi
- * 3x красный (300мс)  -> ошибка MQTT
- * ============================================================
  */
 
-#define PIN_LED_RED    6
-#define PIN_LED_GREEN  7
-#define PIN_LED_BLUE  9
-
-
+#define PIN_LED_RED    10
+#define PIN_LED_GREEN  20
+#define PIN_LED_BLUE  21
 
 
 enum LedColor {
@@ -68,7 +56,7 @@ enum LedSuccesState {
 
 enum LedInfoState {
     UNDEF_1,
-    MQTT_CON_TRY,
+    CONN_TRY,
     MQTT_SEND_TRY,
     START_CONFIG
 };
@@ -125,14 +113,15 @@ void ledBlink(LedColor color, int count = 1, int duration = LED_BLINK_DURATION) 
         ledSetColor(LED_OFF);
         if (i < count - 1) delay(duration);
     }
-    delay(500);
+
+    delay(50);
 }
 
 void ledSuccess(int count = 1, int duration = LED_BLINK_DURATION) {
     ledBlink(LED_GREEN, count, duration);
 }
 
-void ledInfo(int count = 1, int duration = LED_BLINK_DURATION) {
+void    ledInfo(int count = 1, int duration = LED_BLINK_DURATION) {
     ledBlink(LED_BLUE, count, duration);
 }
 

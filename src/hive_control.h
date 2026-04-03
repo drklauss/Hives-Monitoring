@@ -30,7 +30,6 @@ void goToSleep() {
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
     
-    Serial.flush();
     delay(100);  // Даем время на завершение всех операций
     
     esp_deep_sleep_start();

@@ -9,10 +9,8 @@
 #include "secrets.h"
 #include "led.h"
 
-#define MQTT_MAX_RETRIES 3
-#define MQTT_RETRY_DELAY 1000
-#define MQTT_PUBLISH_RETRIES 2
-#define MQTT_CONNECT_TIMEOUT 10000
+#define MQTT_PUBLISH_RETRIES 5
+#define MQTT_CONNECT_TIMEOUT 30000
 
 WiFiClientSecure secureClient;
 PubSubClient mqttClient(secureClient);
@@ -29,12 +27,12 @@ void initMQTT() {
     secureClient.setCertificate(client_cert);
     secureClient.setPrivateKey(client_key);
     
-    secureClient.setTimeout(10);          
-    secureClient.setHandshakeTimeout(10);
+    secureClient.setTimeout(60);          
+    secureClient.setHandshakeTimeout(60);
     
     mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
     mqttClient.setBufferSize(512);
-    mqttClient.setKeepAlive(30);
+    mqttClient.setKeepAlive(60);
 }
 
 // ========== ПОДКЛЮЧЕНИЕ К MQTT ==========
@@ -44,19 +42,19 @@ bool connectMQTT() {
     String clientId = "Hive-";
     clientId += String(hiveId);
 
-    ledInfo(MQTT_CON_TRY, 200);
-    
     unsigned long start = millis();
     while (!mqttClient.connected() && (millis() - start) < MQTT_CONNECT_TIMEOUT) {
+        ledInfo(CONN_TRY, 50);  // короткое мигание
         if (mqttClient.connect(clientId.c_str())) {
-            ledSuccess(MQTT_CON_CONNECTED, 200); 
+            mqttClient.loop();
+            ledSuccess(MQTT_CON_CONNECTED, 100); 
             return true;
         }
-        delay(500);
+        mqttClient.loop();
+        delay(200); 
     }
     
-    ledError(MQTT_CON_ERR, 300); 
-
+    ledError(MQTT_CON_ERR, 300);
     return false;
 }
 
@@ -88,7 +86,8 @@ bool publishHiveData() {
 
             return true;
         }
-        delay(300);
+
+        delay(50);
         mqttClient.loop();
     }
     
@@ -103,13 +102,20 @@ bool sendMQTTData() {
     
     if (!connectMQTT()) return false;
     
-    delay(100);  
-    mqttClient.loop();
+    for (int i = 0; i < 10; i++) {
+        mqttClient.loop();
+        delay(50);
+    }
     
     bool result = publishHiveData();
     
-    mqttClient.loop();
+    for (int i = 0; i < 5; i++) {
+        mqttClient.loop();
+        delay(50);
+    }
+    
     mqttClient.disconnect();
+    delay(50);
     
     return result;
 }

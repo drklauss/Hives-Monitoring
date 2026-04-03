@@ -8,16 +8,12 @@
 #include "wifi_manager.h"
 #include "mqtt_manager.h"
 #include "web_server.h"
-#include "ota_manager.h"
 #include "led.h"
-
-
 
 void setup()
 {
     isLogEnabled = DEBUG_MODE;
 
-    
     initHardware();
     loadSettings();
 
@@ -30,7 +26,7 @@ void setup()
     {
         ledSuccess(START, 400);
 
-        if (connectToWiFiWithTimeout(15000))
+        if (connectToWiFi())
         {
             readSensors();  // Читаем датчики
             sendMQTTData(); // Отправляем MQTT с полным циклом
@@ -40,7 +36,7 @@ void setup()
         {
             // WiFi нет
             ledError(WIFI_ERR, 200);
-            delay(1000);
+            delay(500);
         }
 
         goToSleep();

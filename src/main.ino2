@@ -1,0 +1,90 @@
+// ========================================
+// WiFi AP Mode Test для ESP32-C3
+// Создаёт точку доступа и веб-страницу
+// ========================================
+
+#include <WiFi.h>
+
+// Настройки точки доступа
+const char* ap_ssid = "ESP32-C3-Test";
+const char* ap_password = "12345678";
+
+// Web server на порту 80
+WiFiServer server(80);
+
+// ========== НАСТРОЙКА ==========
+void setup() {
+    Serial.begin(115200);
+    delay(5000);
+    
+    Serial.println("\n=================================");
+    Serial.println("ESP32-C3 WiFi AP Mode Test");
+    Serial.println("=================================");
+    
+    // Запускаем точку доступа
+    Serial.printf("Creating AP: %s\n", ap_ssid);
+    
+    // Важно: режим только AP (без STA)
+    WiFi.mode(WIFI_AP);
+    WiFi.setTxPower(WIFI_POWER_17dBm);
+
+    // Запускаем AP
+    if (WiFi.softAP(ap_ssid, ap_password)) {
+        Serial.println("✅ AP started successfully!");
+        Serial.printf("   IP address: %s\n", WiFi.softAPIP().toString().c_str());
+        Serial.printf("   Channel: %d\n", WiFi.channel());
+    } else {
+        Serial.println("❌ Failed to start AP!");
+    }
+    
+    // Запускаем веб-сервер
+    server.begin();
+    Serial.println("✅ Web server started on port 80");
+    Serial.println("=================================");
+    
+    // Мигаем встроенным LED для индикации
+    pinMode(LED_BUILTIN, OUTPUT);
+}
+
+// ========== ОСНОВНОЙ ЦИКЛ ==========
+void loop() {
+    // Мигаем LED раз в 2 секунды (признак работы)
+    static unsigned long lastBlink = 0;
+    if (millis() - lastBlink > 2000) {
+        digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+        lastBlink = millis();
+        
+        // Выводим количество подключенных клиентов
+        Serial.printf("Connected clients: %d\n", WiFi.softAPgetStationNum());
+    }
+    
+    // Обрабатываем веб-запросы
+    WiFiClient client = server.available();
+    if (client) {
+        String request = client.readStringUntil('\r');
+        client.flush();
+        
+        // Отправляем простую HTML страницу
+        client.println("HTTP/1.1 200 OK");
+        client.println("Content-Type: text/html");
+        client.println("Connection: close");
+        client.println();
+        client.println("<!DOCTYPE HTML>");
+        client.println("<html>");
+        client.println("<head><title>ESP32-C3 AP Test</title></head>");
+        client.println("<body>");
+        client.println("<h1>✅ ESP32-C3 WiFi AP is working!</h1>");
+        client.println("<p>SSID: " + String(ap_ssid) + "</p>");
+        client.println("<p>IP: " + WiFi.softAPIP().toString() + "</p>");
+        client.println("<hr>");
+        client.println("<p>Connected clients: " + String(WiFi.softAPgetStationNum()) + "</p>");
+        client.println("</body></html>");
+        
+        delay(10);
+        client.stop();
+        
+        Serial.println("Web request handled");
+    }
+    
+    delay(10);
+}

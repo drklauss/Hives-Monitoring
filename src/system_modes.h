@@ -5,7 +5,6 @@
 #include "settings.h"
 #include "wifi_manager.h"
 #include "web_server.h"
-#include "ota_manager.h"
 #include "sensors.h"
 #include "hive_control.h"
 #include "led.h"
@@ -25,7 +24,6 @@ void runConfigMode() {
     
     // Инициализируем веб-сервер и OTA
     initWebServer();
-    initOTA();
     
     // Запоминаем время старта
     lastActivity = millis();
@@ -33,7 +31,6 @@ void runConfigMode() {
     // Основной цикл
     while (true) {
         handleWebServer();
-        // handleOTA();
         
         // Проверяем таймаут бездействия
         if (millis() - lastActivity > CONFIG_MODE_TIMEOUT) {
